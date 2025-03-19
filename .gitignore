@@ -1,0 +1,30 @@
+.idea/
+results/
+agentdam/results/
+agentdam/.auth/*
+agentdam/data/wa_format/gitlab_privacy/*
+agentdam/data/wa_format/reddit_privacy/*
+agentdam/data/wa_format/shopping_privacy/*
+agentdam/__pycache__/*
+agentdam/log_files/*
+misc/
+.auth/*
+log_files/*
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+
+
+
+# mac OS
+*.DS_Store
+
+.vscode
+*tmp*
