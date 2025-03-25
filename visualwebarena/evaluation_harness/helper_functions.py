@@ -13,7 +13,6 @@ from browser_env.env_config import (
     ACCOUNTS,
     REDDIT,
     SHOPPING,
-    WIKIPEDIA,
 )
 from llms.providers.openai_utils import (
     generate_from_openai_chat_completion,
