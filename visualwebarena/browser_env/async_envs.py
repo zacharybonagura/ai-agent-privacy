@@ -13,17 +13,6 @@ from playwright.async_api import Page, ViewportSize, async_playwright
 from .actions import Action, aexecute_action, get_action_space
 from .utils import DetachedPage, png_bytes_to_numpy
 
-def _wrap_text_metadata(self, content: str) -> dict:
-    """
-    Convert raw HTML text into a dict format similar to the sync env.
-    At minimum, provide an obs_nodes_info with the raw page.
-    """
-    return {
-        "obs_nodes_info": {
-            "raw_page": {"text": content}
-        }
-    }
-
 class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
     """
     The goal of this environment is to produce a prototype of a browser environment.
@@ -55,6 +44,17 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
         self.reset_finished = False
         self.timeout = timeout
         self.viewport_size = viewport_size
+
+    def _wrap_text_metadata(self, content: str) -> dict:
+        """
+        Convert raw HTML text into a dict format similar to the sync env.
+        At minimum, provide an obs_nodes_info with the raw page.
+        """
+        return {
+            "obs_nodes_info": {
+                "raw_page": {"text": content}
+            }
+        }
 
     @beartype
     async def setup(self, config_file: Path | None = None) -> None:
