@@ -44,31 +44,6 @@ from browser_env.helper_functions import (
 from evaluation_harness import evaluator_router, image_utils
 from privacy_eval import PrivacyEvaluator
 
-
-def sanitize_action(action):
-    """Ensure the action is always a dict with required fields."""
-    if isinstance(action, dict):
-        return action
-    # Try to parse if it's a string
-    if isinstance(action, str):
-        try:
-            parsed = json.loads(action)
-            if isinstance(parsed, dict):
-                return parsed
-        except Exception:
-            pass
-        return {
-            "element_id": "?",
-            "action_type": ActionTypes.NONE,
-            "raw_prediction": action,
-        }
-    # Fallback for any weird type
-    return {
-        "element_id": "?",
-        "action_type": ActionTypes.NONE,
-        "raw_prediction": str(action),
-    }
-
 DATASET = os.environ["DATASET"]
 
 LOG_FOLDER = "log_files"
@@ -443,7 +418,27 @@ async def test(
                         # get the error message
                         raw_action = create_stop_action(f"ERROR: {str(e)}")
 
-                action = sanitize_action(raw_action)
+                action = raw_action
+                
+                if isinstance(action, str):
+                    print("!!! Converting raw string action:", action)
+                    lower_action = action.lower()
+
+                    if "click" in lower_action:
+                        action_type = ActionTypes.CLICK
+                    elif "type" in lower_action:
+                        action_type = ActionTypes.TYPE
+                    elif "hover" in lower_action:
+                        action_type = ActionTypes.HOVER
+                    else:
+                        action = create_stop_action(f"Unrecognized raw string: {action}")
+                    if not isinstance(action, dict):
+                        action = {
+                            "action_type": action_type,
+                            "element_id": "unknown",
+                            "raw_prediction": action,
+                        }
+                        
                 trajectory.append(action)
 
                 action_str = get_action_description(
