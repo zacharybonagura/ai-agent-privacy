@@ -70,6 +70,10 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
             device_scale_factor=1,
         )
         self.page = await self.context.new_page()
+
+        if not start_url.startswith(("http://", "https://")):
+            start_url = "http://" + start_url
+
         if start_url:
             await self.page.goto(start_url)
 
@@ -79,7 +83,7 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
         *,
         seed: int | None = None,
         options: dict[str, str] | None = None,
-    ) -> tuple[npt.NDArray[np.uint8], dict[str, object]]:
+    ) -> tuple[dict[str, object], dict[str, object]]:
         """
         Reset the environment.
         :param options: options for the environment. The options are:
@@ -100,8 +104,22 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
         content = await self.page.content()
         screenshot = png_bytes_to_numpy(await self.page.screenshot())
         return (
-            screenshot,
-            {"page": DetachedPage(self.page.url, content)},
+            {
+                "image": screenshot,
+                "html": content,
+                "text": content,
+            },
+            {
+                "page": DetachedPage(self.page.url, content),
+                "observation_metadata": {
+                    "url": self.page.url,
+                    "length": len(content),
+                    "type": "html",
+                    "text": content,
+                    "html": content,
+                    "image": "screenshot",
+                }
+            },
         )
 
     @beartype
@@ -123,7 +141,7 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
     @beartype
     async def astep(
         self, action: Action
-    ) -> tuple[npt.NDArray[np.uint8], float, bool, bool, dict[str, object]]:
+    ) -> tuple[dict[str, object], float, bool, bool, dict[str, object]]:
         if not self.reset_finished:
             raise RuntimeError("Call reset first before calling step.")
         success = False
@@ -143,13 +161,23 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
             screenshot = png_bytes_to_numpy(await self.page.screenshot())
 
         return (
-            screenshot,
+            {
+                "image": screenshot,
+                "html": content,
+                "text": content,
+            },
             float(success),
             False,
             False,
             {
                 "page": DetachedPage(self.page.url, content),
                 "fail_error": fail_error,
+                "observation_metadata": {
+                    "url": self.page.url,
+                    "length": len(content),
+                    "type": "html"
+                },
+
             },
         )
 

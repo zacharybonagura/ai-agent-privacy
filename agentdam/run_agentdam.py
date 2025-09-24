@@ -12,6 +12,7 @@ import random
 import subprocess
 import tempfile
 import time
+
 from datetime import datetime
 from pathlib import Path
 from typing import List
@@ -29,11 +30,11 @@ from agent.prompts import *
 from browser_env import (
     Action,
     ActionTypes,
-    ScriptBrowserEnv,
     StateInfo,
     Trajectory,
     create_stop_action,
 )
+from browser_env.async_envs import AsyncScriptBrowserEnv
 from browser_env.actions import is_equivalent
 from browser_env.auto_login import get_site_comb_from_filepath
 from browser_env.helper_functions import (
@@ -42,6 +43,31 @@ from browser_env.helper_functions import (
 )
 from evaluation_harness import evaluator_router, image_utils
 from privacy_eval import PrivacyEvaluator
+
+
+def sanitize_action(action):
+    """Ensure the action is always a dict with required fields."""
+    if isinstance(action, dict):
+        return action
+    # Try to parse if it's a string
+    if isinstance(action, str):
+        try:
+            parsed = json.loads(action)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            pass
+        return {
+            "element_id": "?",
+            "action_type": ActionTypes.NONE,
+            "raw_prediction": action,
+        }
+    # Fallback for any weird type
+    return {
+        "element_id": "?",
+        "action_type": ActionTypes.NONE,
+        "raw_prediction": str(action),
+    }
 
 DATASET = os.environ["DATASET"]
 
@@ -262,7 +288,7 @@ def early_stop(
     return False, ""
 
 
-def test(
+async def test(
     args: argparse.Namespace,
     config_file_list: list[str]
 ) -> None:
@@ -315,20 +341,14 @@ def test(
         else None,
     )  # NOTE: captioning_fn here is used for captioning input images.
 
-    env = ScriptBrowserEnv(
-        headless=not args.render,
-        slow_mo=args.slow_mo,
-        observation_type=args.observation_type,
-        current_viewport_only=args.current_viewport_only,
-        viewport_size={
-            "width": args.viewport_width,
-            "height": args.viewport_height,
-        },
-        save_trace_enabled=args.save_trace_enabled,
-        sleep_after_execution=args.sleep_after_execution,
-        # NOTE: captioning_fn here is used for LLM + captioning baselines.
-        # This can be different from the captioning model used for evals.
-        captioning_fn=caption_image_fn,
+    env = AsyncScriptBrowserEnv(
+	headless=not args.render,
+	slow_mo=args.slow_mo,
+	viewport_size={
+	"width": args.viewport_width,
+	"height": args.viewport_height,
+	},
+	timeout=30000,
     )
 
     privacy_scores = []
@@ -363,15 +383,15 @@ def test(
                     temp_dir = tempfile.mkdtemp()
                     # subprocess to renew the cookie
                     subprocess.run(
-                        [
-                            "python",
-                            "../visualwebarena/browser_env/auto_login.py",
-                            "--auth_folder",
-                            temp_dir,
-                            "--site_list",
-                            *comb,
-                        ]
-                    )
+		        [
+		            "python",
+		            "../visualwebarena/browser_env/auto_login.py",
+		            "--auth_folder",
+		            temp_dir,
+		            "--site_list",
+		            *comb,
+		        ]
+		    )
                     _c["storage_state"] = f"{temp_dir}/{cookie_file_name}"
                     assert os.path.exists(_c["storage_state"])
                     # update the config file
@@ -398,7 +418,7 @@ def test(
 
             agent.reset(config_file)
             trajectory: Trajectory = []
-            obs, info = env.reset(options={"config_file": config_file})
+            obs, info = await env.areset(options={"config_file": config_file})
             state_info: StateInfo = {"observation": obs, "info": info}
             trajectory.append(state_info)
 
@@ -410,10 +430,10 @@ def test(
                 )
 
                 if early_stop_flag:
-                    action = create_stop_action(f"Early stop: {stop_info}")
+                    raw_action = create_stop_action(f"Early stop: {stop_info}")
                 else:
                     try:
-                        action = agent.next_action(
+                        raw_action = agent.next_action(
                             trajectory,
                             intent,
                             images=images,
@@ -421,8 +441,9 @@ def test(
                         )
                     except ValueError as e:
                         # get the error message
-                        action = create_stop_action(f"ERROR: {str(e)}")
+                        raw_action = create_stop_action(f"ERROR: {str(e)}")
 
+                action = sanitize_action(raw_action)
                 trajectory.append(action)
 
                 action_str = get_action_description(
@@ -449,7 +470,7 @@ def test(
                 if action["action_type"] == ActionTypes.STOP:
                     break
 
-                obs, _, terminated, _, info = env.step(action)
+                obs, _, terminated, _, info = await env.astep(action)
                 state_info = {"observation": obs, "info": info}
                 trajectory.append(state_info)
 
@@ -500,7 +521,7 @@ def test(
 
         render_helper.close()
 
-    env.close()
+    await env.aclose()
 
     if len(scores):
         logger.info(f"\nTotal performance score: {sum(scores)} / Out of: {len(scores)}")
@@ -580,4 +601,6 @@ if __name__ == "__main__":
     args.current_viewport_only = True
     dump_config(args)
 
-    test(args, test_file_list)
+    import asyncio
+    asyncio.run(test(args, test_file_list))
+    # test(args, test_file_list)

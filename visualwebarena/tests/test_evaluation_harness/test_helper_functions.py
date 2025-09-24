@@ -1,7 +1,7 @@
 import json
 import os
 
-from browser_env import ScriptBrowserEnv
+from browser_env.async_envs import ScriptBrowserEnv
 from browser_env.env_config import *
 from evaluation_harness.helper_functions import (
     get_query_text,

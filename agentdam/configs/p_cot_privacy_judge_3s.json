@@ -1,6 +1,6 @@
 {
   "meta_data": {
-    "use_azure": true,
+    "use_azure": false,
     "model": "gpt-4o",
     "temperature": 1.0,
     "max_tokens": 1000

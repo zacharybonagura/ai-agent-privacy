@@ -40,6 +40,14 @@ def get_render_action(
     action_set_tag: str,
 ) -> str:
     """Parse the predicted actions for rendering purpose. More comprehensive information"""
+    
+    # --- safeguard against malformed actions ---
+    if not isinstance(action, dict):
+        return (
+            f"<div class='error_action' style='background-color:red'>"
+            f"<pre>Invalid action format: {repr(action)}</pre></div>"
+        )
+
     match action_set_tag:
         case "id_accessibility_tree":
             text_meta_data = observation_metadata["text"]
@@ -84,6 +92,9 @@ def get_action_description(
 ) -> str:
     """Generate the text version of the predicted actions to store in action history for prompt use.
     May contain hint information to recover from the failures"""
+    # --- safeguard ---
+    if not isinstance(action, dict):
+        return f"Invalid action format: {repr(action)}"
 
     match action_set_tag:
         case "id_accessibility_tree":
