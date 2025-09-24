@@ -423,7 +423,6 @@ async def test(
                 if isinstance(action, str):
                     print("!!! Converting raw string action:", action)
                     lower_action = action.lower()
-
                     if "click" in lower_action:
                         action_type = ActionTypes.CLICK
                     elif "type" in lower_action:
@@ -431,13 +430,13 @@ async def test(
                     elif "hover" in lower_action:
                         action_type = ActionTypes.HOVER
                     else:
-                        action = create_stop_action(f"Unrecognized raw string: {action}")
-                    if not isinstance(action, dict):
-                        action = {
-                            "action_type": action_type,
-                            "element_id": "unknown",
-                            "raw_prediction": action,
-                        }
+                        action_type = ActionTypes.NONE
+
+                    action = {
+                        "action_type": action_type,
+                        "element_id": "unknown",
+                        "raw_prediction": action,
+                    }
                         
                 trajectory.append(action)
 
