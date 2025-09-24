@@ -92,10 +92,6 @@ def get_action_description(
 ) -> str:
     """Generate the text version of the predicted actions to store in action history for prompt use.
     May contain hint information to recover from the failures"""
-    
-    print("DEBUG text_meta_data type:", type(text_meta_data))
-    print("DEBUG text_meta_data keys/contents:", text_meta_data if isinstance(text_meta_data, dict) else str(text_meta_data)[:500])
-
     # --- safeguard ---
     if not isinstance(action, dict):
         return f"Invalid action format: {repr(action)}"
@@ -108,6 +104,9 @@ def get_action_description(
                 ActionTypes.HOVER,
                 ActionTypes.TYPE,
             ]:
+                print("DEBUG text_meta_data type:", type(text_meta_data))
+                print("DEBUG text_meta_data keys/contents:", text_meta_data if isinstance(text_meta_data, dict) else str(text_meta_data)[:500])
+
                 action_name = str(action["action_type"]).split(".")[1].lower()
                 if action["element_id"] in text_meta_data["obs_nodes_info"]:
                     node_content = text_meta_data["obs_nodes_info"][
