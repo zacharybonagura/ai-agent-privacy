@@ -13,6 +13,16 @@ from playwright.async_api import Page, ViewportSize, async_playwright
 from .actions import Action, aexecute_action, get_action_space
 from .utils import DetachedPage, png_bytes_to_numpy
 
+def _wrap_text_metadata(self, content: str) -> dict:
+    """
+    Convert raw HTML text into a dict format similar to the sync env.
+    At minimum, provide an obs_nodes_info with the raw page.
+    """
+    return {
+        "obs_nodes_info": {
+            "raw_page": {"text": content}
+        }
+    }
 
 class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
     """
@@ -107,14 +117,14 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
             {
                 "image": screenshot,
                 "html": content,
-                "text": content,
+                "text": self._wrap_text_metadata(content),
             },
             {
                 "page": DetachedPage(self.page.url, content),
                 "observation_metadata": {
                     "url": self.page.url,
                     "length": len(content),
-                    "type": "html",
+                    "type": "accessibility_tree",
                     "text": content,
                     "html": content,
                     "image": "screenshot",
@@ -164,7 +174,7 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
             {
                 "image": screenshot,
                 "html": content,
-                "text": content,
+                "text": self._wrap_text_metadata(content),
             },
             float(success),
             False,
@@ -173,11 +183,13 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
                 "page": DetachedPage(self.page.url, content),
                 "fail_error": fail_error,
                 "observation_metadata": {
-                    "url": self.page.url,
-                    "length": len(content),
-                    "type": "html"
-                },
-
+                "url": self.page.url,
+                "length": len(content),
+                "type": "accessibility_tree",    
+                "text": self._wrap_text_metadata(content),
+                "html": content,
+                "image": "screenshot",
+            },
             },
         )
 
