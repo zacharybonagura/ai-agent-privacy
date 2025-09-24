@@ -125,7 +125,7 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
                     "url": self.page.url,
                     "length": len(content),
                     "type": "accessibility_tree",
-                    "text": content,
+                    "text": self._wrap_text_metadata(content),
                     "html": content,
                     "image": "screenshot",
                 }
