@@ -42,6 +42,7 @@ from browser_env.helper_functions import (
     get_action_description,
 )
 from evaluation_harness import evaluator_router, image_utils
+from evaluation_harness.helper_functions import PseudoPage
 from privacy_eval import PrivacyEvaluator
 
 DATASET = os.environ["DATASET"]
@@ -477,10 +478,11 @@ async def test(
             evaluator = evaluator_router(
                 config_file, captioning_fn=eval_caption_image_fn
             )
+            safe_page = PseudoPage(env.page.url, await env.page.content())
             score = evaluator(
                 trajectory=trajectory,
                 config_file=config_file,
-                page=env.page
+                page=safe_page
             )
 
             scores.append(score)
