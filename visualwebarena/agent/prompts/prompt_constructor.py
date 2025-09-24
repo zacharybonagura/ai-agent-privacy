@@ -172,6 +172,13 @@ class DirectPromptConstructor(PromptConstructor):
         state_info: StateInfo = trajectory[-1]  # type: ignore[assignment]
 
         obs = state_info["observation"][self.obs_modality]
+        if isinstance(obs, dict):
+            if "obs_nodes_info" in obs:
+                obs = " ".join(
+                    str(v.get("text", "")) for v in obs["obs_nodes_info"].values()
+                )
+            else:
+                obs = str(obs)
         max_obs_length = self.lm_config.gen_config["max_obs_length"]
         if max_obs_length:
             if self.lm_config.provider == "google":
@@ -234,6 +241,13 @@ class CoTPromptConstructor(PromptConstructor):
         state_info: StateInfo = trajectory[-1]  # type: ignore[assignment]
 
         obs = state_info["observation"][self.obs_modality]
+        if isinstance(obs, dict):
+            if "obs_nodes_info" in obs:
+                obs = " ".join(
+                    str(v.get("text", "")) for v in obs["obs_nodes_info"].values()
+                )
+            else:
+                obs = str(obs)
         max_obs_length = self.lm_config.gen_config["max_obs_length"]
         if max_obs_length:
             if self.lm_config.provider == "google":
@@ -295,6 +309,13 @@ class MultimodalCoTPromptConstructor(CoTPromptConstructor):
         state_info: StateInfo = trajectory[-1]  # type: ignore[assignment]
 
         obs = state_info["observation"][self.obs_modality]
+        if isinstance(obs, dict):
+            if "obs_nodes_info" in obs:
+                obs = " ".join(
+                    str(v.get("text", "")) for v in obs["obs_nodes_info"].values()
+                )
+            else:
+                obs = str(obs)
         max_obs_length = self.lm_config.gen_config["max_obs_length"]
         if max_obs_length:
             if self.lm_config.provider == "google":
