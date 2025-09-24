@@ -478,7 +478,7 @@ async def test(
             evaluator = evaluator_router(
                 config_file, captioning_fn=eval_caption_image_fn
             )
-            safe_page = PseudoPage(env.page.url, await env.page.content())
+            safe_page = PseudoPage(env.page, env.page.url)
             score = evaluator(
                 trajectory=trajectory,
                 config_file=config_file,
