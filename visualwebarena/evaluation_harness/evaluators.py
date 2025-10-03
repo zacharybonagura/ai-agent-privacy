@@ -15,7 +15,7 @@ from beartype import beartype
 from beartype.door import is_bearable
 from nltk.tokenize import word_tokenize  # type: ignore
 from PIL import Image
-from playwright.sync_api import CDPSession, Page
+from playwright.async_api import Page
 
 from browser_env.actions import Action
 from browser_env.utils import StateInfo
@@ -52,7 +52,7 @@ class Evaluator(object):
     def __init__(self, eval_tag: str = "") -> None:
         self.eval_tag = eval_tag
 
-    def __call__(
+    async def __call__(
         self,
         trajectory: Trajectory,
         config_file: Path | str,
@@ -200,7 +200,7 @@ class StringEvaluator(Evaluator):
     def ua_match(ref: str, pred: str, intent: str) -> float:
         return llm_ua_match(pred, ref, intent)
 
-    def __call__(
+    async def __call__(
         self,
         trajectory: Trajectory,
         config_file: Path | str,
@@ -281,7 +281,7 @@ class StringEvaluator(Evaluator):
 class StringSoftEvaluator(Evaluator):
     """Use text generation metrics such as BLEU, ROUGE, etc. to evaluate the answer"""
 
-    def __call__(
+    async def __call__(
         self,
         trajectory: Trajectory,
         config_file: Path | str,
@@ -303,7 +303,7 @@ class StringSoftEvaluator(Evaluator):
 class URLExactEvaluator(Evaluator):
     """Check whether the URL is exactly the same as of the reference URLs"""
 
-    def __call__(
+    async def __call__(
         self,
         trajectory: Trajectory,
         config_file: Path | str,
@@ -342,7 +342,7 @@ class URLExactEvaluator(Evaluator):
 class HTMLContentExactEvaluator(Evaluator):
     """Check whether the contents appear in the page"""
 
-    def __call__(
+    async def __call__(
         self,
         trajectory: Trajectory,
         config_file: Path | str,
@@ -359,18 +359,18 @@ class HTMLContentExactEvaluator(Evaluator):
             if target_url.startswith("func"):
                 func = target_url.split("func:")[1]
                 func = func.replace("__last_url__", page.url)
-                target_url = eval(func)
+                target_url = await eval(func)
 
             locator: str = target["locator"]  # js element locator
 
             # navigate to that url
             if target_url != "last":
-                page.goto(target_url)
+                await page.goto(target_url)
                 time.sleep(3)  # TODO [shuyanzh]: fix this hard-coded sleep
 
             # empty, use the full page
             if not locator.strip():
-                selected_element = page.content()
+                selected_element = await page.content()
             # use JS to select the element
             elif locator.startswith("document.") or locator.startswith(
                 "[...document."
@@ -378,11 +378,11 @@ class HTMLContentExactEvaluator(Evaluator):
                 if "prep_actions" in target:
                     try:
                         for prep_action in target["prep_actions"]:
-                            page.evaluate(f"() => {prep_action}")
+                            await page.evaluate(f"() => {prep_action}")
                     except Exception:
                         pass
                 try:
-                    selected_element = str(page.evaluate(f"() => {locator}"))
+                    selected_element = str(await page.evaluate(f"() => {locator}"))
                     if not selected_element:
                         selected_element = ""
                 except Exception:
@@ -391,7 +391,7 @@ class HTMLContentExactEvaluator(Evaluator):
             elif locator.startswith("lambda:"):
                 try:
                     locator = locator.lstrip("lambda:")
-                    selected_element = page.evaluate(locator)
+                    selected_element = await page.evaluate(locator)
                     if not selected_element:
                         selected_element = None
                 except Exception:
@@ -490,7 +490,7 @@ class PageImageEvaluator(Evaluator):
         # This might be too generous but we bias towards minimizing false negatives.
         self.ssim_threshold = 0.8
 
-    def __call__(
+    async def __call__(
         self,
         trajectory: Trajectory,
         config_file: Path | str,
@@ -509,7 +509,7 @@ class PageImageEvaluator(Evaluator):
 
             # navigate to that url
             if target_url != "last":
-                page.goto(target_url)
+                await page.goto(target_url)
                 time.sleep(3)  # TODO(jykoh): fix this hard-coded sleep
 
             # empty, use the full page
@@ -518,16 +518,16 @@ class PageImageEvaluator(Evaluator):
             # use JS to select the element
             elif locator.startswith("."):
                 # Get all img children under the locator
-                elements = page.query_selector_all(locator)
+                elements = await page.query_selector_all(locator)
                 images = []
                 for element in elements:
-                    is_img = element.evaluate(
+                    is_img = await element.evaluate(
                         'element => element.tagName === "IMG"'
                     )
                     if is_img:
                         images.append(element)
                     else:
-                        images.extend(element.query_selector_all("img"))
+                        images.extend(await element.query_selector_all("img"))
             else:
                 raise ValueError(f"Unknown locator: {locator}")
 
@@ -538,7 +538,7 @@ class PageImageEvaluator(Evaluator):
             for image in images:
                 try:
                     # Get image from URL.
-                    image_url = image.get_attribute("src")
+                    image_url = await image.get_attribute("src")
                     if not image_url.startswith(
                         ("http://", "https://", "www.")
                     ):
@@ -608,7 +608,7 @@ class EvaluatorComb:
     def __init__(self, evaluators: list[Evaluator]) -> None:
         self.evaluators = evaluators
 
-    def __call__(
+    async def __call__(
         self,
         trajectory: Trajectory,
         config_file: Path | str,
@@ -617,7 +617,7 @@ class EvaluatorComb:
 
         score = 1.0
         for evaluator in self.evaluators:
-            cur_score = evaluator(trajectory, config_file, page)
+            cur_score = await evaluator(trajectory, config_file, page)
             score *= cur_score
 
         return score
