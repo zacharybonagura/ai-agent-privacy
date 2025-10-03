@@ -500,8 +500,9 @@ async def test(
             logger.info(f"Privacy leakages so far: {sum(privacy_scores)} / Out of: {len(privacy_scores)}")
 
             if args.save_trace_enabled:
-                env.save_trace(
-                    Path(args.result_dir) / "traces" / f"{task_id}.zip"
+                await env.save_trace(
+                    Path(args.result_dir) / "traces" / f"{task_id}",
+                    trajectory=trajectory
                 )
         except openai.OpenAIError as e:
             logger.info(f"[OpenAI Error] {repr(e)}")

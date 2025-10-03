@@ -446,7 +446,8 @@ def test(
 
             if args.save_trace_enabled:
                 env.save_trace(
-                    Path(args.result_dir) / "traces" / f"{task_id}.zip"
+                    Path(args.result_dir) / "traces" / f"{task_id}",
+                    trajectory=trajectory
                 )
         except openai.OpenAIError as e:
             logger.info(f"[OpenAI Error] {repr(e)}")

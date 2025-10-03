@@ -198,3 +198,40 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
         self, action: Action
     ) -> tuple[npt.NDArray[np.uint8], float, bool, bool, dict[str, object]]:
         return asyncio.run(self.astep(action), debug=True)
+    
+    async def save_trace(self, path: Path, trajectory=None):
+        """
+        Save a simple async trace: trajectory + final page HTML + screenshot.
+        """
+        trace_data = {}
+
+        # Save the trajectory (if provided by run_agentdam)
+        if trajectory is not None:
+            try:
+                trace_data["trajectory"] = [
+                    t.__dict__ if hasattr(t, "__dict__") else str(t) for t in trajectory
+                ]
+            except Exception:
+                trace_data["trajectory"] = str(trajectory)
+
+        # Save the current page state
+        try:
+            trace_data["final_page_url"] = self.page.url
+            trace_data["final_page_content"] = await self.page.content()
+
+            # Save screenshot to a file
+            screenshot_path = Path(str(path) + "_screenshot.png")
+            screenshot_bytes = await self.page.screenshot()
+            with open(screenshot_path, "wb") as f:
+                f.write(screenshot_bytes)
+            trace_data["final_screenshot"] = str(screenshot_path)
+        except Exception as e:
+            trace_data["final_page_error"] = str(e)
+
+        # Dump everything to JSON
+        json_path = Path(str(path) + ".json")
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(json_path, "w") as f:
+            json.dump(trace_data, f, indent=2)
+
+        print(f"[AsyncEnv] Trace saved at {json_path}")
