@@ -365,6 +365,8 @@ class HTMLContentExactEvaluator(Evaluator):
 
             # navigate to that url
             if target_url != "last":
+                if not target_url.startswith(("http://", "https://")):
+                    target_url = "http://" + target_url
                 await page.goto(target_url)
                 time.sleep(3)  # TODO [shuyanzh]: fix this hard-coded sleep
 
@@ -509,6 +511,8 @@ class PageImageEvaluator(Evaluator):
 
             # navigate to that url
             if target_url != "last":
+                if not target_url.startswith(("http://", "https://")):
+                    target_url = "http://" + target_url
                 await page.goto(target_url)
                 time.sleep(3)  # TODO(jykoh): fix this hard-coded sleep
 
